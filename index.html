@@ -1,1 +1,85 @@
-<!-- Your HTML goes here -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Horizontal Bar Chart (Sorted by Count)</title>
+    <style>
+        .bar {
+            fill: steelblue;
+        }
+        .bar:hover {
+            fill: orange;
+        }
+        .axis-label {
+            font-size: 14px;
+        }
+        .citation {
+            font-size: 12px;
+            fill: gray;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Top 10 Reasons for 311 Calls in Boston in 2023</h1>
+    <h2>Sanitation and enforcement & abandoned vehicles were the top two reasons for 311 calls</h2>
+    <svg id="bar-chart" width="800" height="400">
+    <text class="citation" x="10" y="390">Created by Sly Yushchyshyn; Source: City of Boston</text>
+    </svg>
+
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script>
+        // Fetching data from the CSV file
+        fetch('boston_311_2023_by_reason.csv')
+            .then(response => response.text())
+            .then(data => {
+                const rows = data.trim().split('\n').slice(1); // Remove header and split rows
+
+                // Convert rows to objects with reason and count properties
+                const reasons = rows.map(row => {
+                    const columns = row.split(',');
+                    return {
+                        reason: columns[0],
+                        count: parseInt(columns[1])
+                    };
+                });
+
+                // Sort reasons by count in descending order and take the top 10
+                const topReasons = reasons
+                    .sort((a, b) => b.count - a.count) // Sort by count (from highest to lowest)
+                    .slice(0, 10);
+
+                const svg = d3.select('#bar-chart'),
+                    margin = { top: 20, right: 20, bottom: 50, left: 170 },
+                    width = +svg.attr('width') - margin.left - margin.right,
+                    height = +svg.attr('height') - margin.top - margin.bottom;
+
+                const x = d3.scaleLinear().rangeRound([0, width]),
+                    y = d3.scaleBand().rangeRound([height, 0]).padding(0.1);
+
+                const g = svg.append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                x.domain([0, d3.max(topReasons, d => d.count)]);
+                y.domain(topReasons.map(d => d.reason));
+
+                g.append('g')
+                    .attr('class', 'axis axis-x')
+                    .call(d3.axisTop(x).ticks(10).tickSize(-height));
+
+                g.append('g')
+                    .attr('class', 'axis axis-y')
+                    .call(d3.axisLeft(y));
+
+                g.selectAll('.bar')
+                    .data(topReasons)
+                    .enter().append('rect')
+                    .attr('class', 'bar')
+                    .attr('x', 0)
+                    .attr('y', d => y(d.reason))
+                    .attr('width', d => x(d.count))
+                    .attr('height', y.bandwidth());
+            })
+            .catch(error => console.error('Error fetching the data:', error));
+    </script>
+</body>
+</html>
